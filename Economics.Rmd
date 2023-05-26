@@ -1,0 +1,326 @@
+---
+title: "Adam Smith and John Keynes: A Textual Exploration with R"
+
+
+author:
+  
+  
+  
+  - name: Muad Saleh
+primary_colour: "Indigo" 
+
+column_numbers: 5
+logoright_name: https&#58;//user-images.githubusercontent.com/120339576/240756357-37511b58-7867-4775-bc26-40703307dc51.jpg
+logoleft_name: https&#58;//user-images.githubusercontent.com/120339576/240739994-8f9a8ec3-0643-4eaf-ac09-4592e29265e0.jpg
+output: 
+  posterdown::posterdown_html:
+    self_contained: false
+bibliography: packages.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(pdftools)
+library(widyr)
+library(textmineR)
+library(widyr)
+library(tidytext)
+library(dplyr)
+library(scales)
+library(stringr)
+library(gutenbergr)
+library(tidytext)
+library(ggplot2)
+library(tidyverse)
+library(wordcloud)
+library(reshape2)
+library(tidyr)
+library(stopwords)
+library(igraph)
+library(ggraph)
+library(topicmodels)
+library(dplyr)
+library(gapminder)
+
+adam_smith <- gutenberg_download(c(3300))
+tidy_adam_smith<- adam_smith %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+
+
+two22<-tidy_adam_smith%>%
+  count(word, sort = TRUE) %>%
+  filter(n > 200) %>%
+  mutate(word = reorder(word, n)) %>%
+  top_n(25)%>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+
+
+John_Keyenes <- pdf_text("thegeneraltheorypdf.pdf")
+John_Keyenes <- John_Keyenes %>% 
+  str_split('\n')
+John_Keyenes <- John_Keyenes %>% unlist()  
+Tidy_John_Keyenes<-John_Keyenes %>% as_tibble()
+
+Tidy_John_Keyenes<-Tidy_John_Keyenes%>%unnest_tokens(word, value)%>%
+  anti_join(stop_words)
+
+
+three33<-Tidy_John_Keyenes %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 200) %>%
+  mutate(word = reorder(word, n)) %>%
+  top_n(25)%>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+```
+
+# Introduction
+
+Adam Smith's *The Wealth of Nations* and John Keynes's *The General Theory of Employment, Interest, and Money* are two influential works in the field of economics that have greatly shaped economic thought. These works, written in different time periods, present contrasting and evolving perspectives on various economic concepts. In this presentation, I aim to conduct a text analysis of these influential works using R. By comparing the ideas and topics put forth by Smith and Keynes, I seek to gain insights into their differing views on economic principles such as market dynamics, government intervention, employment, interest rates, and money supply.
+
+The objective of this presentation is to highlight the contrasting viewpoints of Adam Smith and John Keynes regarding market dynamics and their implications for economic growth and development. I will only be focusing on their most famous works mentioned above. This analysis will contribute to a deeper understanding of the evolution of economic thought and its implications for contemporary economic theories and policies.
+
+
+# Methods
+
+To compare the texts, I employed a text analysis approach using R, specifically leveraging the tidyverse ecosystem . In addition to many other packages, I utilized dplyr, tidyverse, ggplot2, and wordcloud to clean, analyze and visualize the textual data. This included steps such as tokenization, removing stop words, and frequency analysis. Next, I employed sentiment analysis to understand the overall tone and polarity of the texts. Additionally, I utilized topic modeling techniques, such as Latent Dirichlet Allocation (LDA), to discover and compare the main themes and concepts addressed by Smith and Keynes in their respective works.
+
+# Frequency Analysis
+
+After tidying, tokenizing, and removing stop words from the text, below are the top 25 most frequently used words in *The Wealth of Nations*. Not surprisingly, during the period the book was published in 1776, the industrial revolution had barely started, so words like “stock”,” corn”, “land” and “produce” properly reflected what still dominated the economy at the time. Also, the word “price” is the most used word in the book since it is discussed by Smith in the context of supply, demand, competition, scarcity, and allocating resources, which are basically the major themes in the book. Another major theme in the book is the division of labor and how that saves time and increases productivity. That is why if we look again, we see that the word “labour” and  “time” rank  as the 3rd and 13th most frequently used words in the book, respectively. 
+
+```{r  out.width='80%', fig.align='center', fig.height=5}
+
+two22
+
+```
+
+
+Below are the top 25 most frequently used words in *The General Theory of Employment, Interest, and Money*. We can see that compared to the previous book, we see new words like “rate”, “marginal”, and “investment”. The word “rate” refers to interest rate and it is ranked as the most used word in the book. It is extensively used in the book in the context of macro-economic theory, which is essentially the branch of economics that the book revolutionized. The word “marginal” refers to the incremental change in utility, efficiency, productivity, cost, etc. This reflects how the field of economics had changed since Smith’s period (1776 to 1936) and became a bit more complex and technical. We can also infer a change in the period between the two books by looking at the word I mentioned earlier, “investment”, which refers to investing in equipment, machinery, infrastructure, etc. This reflects the economy at the time the book was published, in 1936, decades after the industrial revolution had already taken place.
+
+```{r standard-plot, out.width='80%', fig.align='center', fig.height=5}
+three33
+```
+
+The term frequency (tf) statistic measures the relative frequency of a term in a document. The inverse document frequency statistic (idf) measures the weight of commonly used words in a document. Multiplied together, we get a term's tf-idf, which measures how important a term is in a collection of documents.
+
+
+```{r fig.align='center', message=FALSE, warning=FALSE, out.width='80%', paged.print=FALSE}
+Tidy_John_Keyenes<- Tidy_John_Keyenes%>% mutate(book="Theory of Employment")
+tidy_adam_smith<- tidy_adam_smith %>% mutate(book="Wealth of Nations")
+both_books<-bind_rows(Tidy_John_Keyenes,tidy_adam_smith) 
+both_books<-both_books %>%
+ count(book, word, sort = TRUE) %>%
+ ungroup()
+total_words <- both_books %>%
+ group_by(book) %>%
+ summarize(total = sum(n))
+both_books1 <- left_join(both_books, total_words)
+
+both_books1 <- both_books1 %>%
+ bind_tf_idf(word, book, n)
+
+
+both_books1 %>%
+ arrange(desc(tf_idf)) %>%
+ mutate(word = factor(word, levels = rev(unique(word)))) %>%
+ group_by(book) %>%
+ top_n(15) %>%
+ ungroup %>%
+ ggplot(aes(word, tf_idf, fill = book)) +
+ geom_col(show.legend = FALSE) +
+ labs(x = NULL, y = "tf-idf") +
+ facet_wrap(~book, ncol = 2, scales = "free") +
+ coord_flip()+
+  scale_fill_manual(values = c("Theory of Employment" = "#CC6666", "Wealth of Nations" = "#CC6666"))
+
+```
+
+# Sentiment Analysis
+
+Using the wordcloud package, we can again visualize the most common words in *The Wealth of Nations*, but this time including sentiment. The size of the word indicates how commonly it is used, and its color indicates whether it is positive or negative. 
+
+```{r fig.align='center', message=FALSE, warning=FALSE, out.width='80%', paged.print=FALSE}
+tidy_adam_smith %>%
+ inner_join(get_sentiments("bing")) %>%
+ count(word, sentiment, sort = TRUE) %>%
+ acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+ comparison.cloud(colors = c("red", "blue"),
+ max.words = 100)
+```
+Below I did a similar thing with *The General Theory of Employment, Interest, and Money*, but instead of visualizing it using a wordcloud, I used a horizontal bar chart. Again, the length of the bar indicates how commonly the word is used, and the color indicates whether it is positive or negative.
+
+```{r fig.align='center', message=FALSE, warning=FALSE, out.width='80%', paged.print=FALSE}
+bing_John_counts <- Tidy_John_Keyenes %>%
+ inner_join(get_sentiments("bing")) %>%
+ count(word, sentiment, sort = TRUE) %>%
+ ungroup()
+bing_John_counts %>%
+ group_by(sentiment) %>%
+ top_n(10) %>%
+ ungroup() %>%
+ mutate(word = reorder(word, n)) %>%
+ ggplot(aes(word, n, fill = sentiment)) +
+ geom_col(show.legend = FALSE) +
+ facet_wrap(~sentiment, scales = "free_y") +
+ labs(y = "Contribution to sentiment",
+ x = NULL) +
+ coord_flip()+
+  scale_fill_manual(values = c("positive" = "blue", "negative" = "red"))
+```
+
+
+# Correlation 
+
+Words from *The General Theory of Employment, Interest, and Money* that were most correlated with "capital", "demand", "cost", and “economics". For example, the word “pigou” is correlated with the word “economics” because Keynes heavily mentions Arthur Pigou, an economist and a critic of many of Keynes's theories.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+
+John_Keyenes4 <- pdf_text("thegeneraltheorypdf.pdf")
+John_Keyenes4 <- John_Keyenes4 %>% 
+  str_split('\n')
+John_Keyenes4 <- John_Keyenes4 %>% unlist()  
+Tidy_John_Keyenes4<-John_Keyenes4 %>% as_tibble()
+
+
+
+john_section_words <- Tidy_John_Keyenes4 %>%
+ mutate(section = row_number() %/% 10) %>%
+ filter(section > 0) %>%
+ unnest_tokens(word, value) %>%
+ filter(!word %in% stop_words$word)
+
+word_pairs <- john_section_words %>%
+ pairwise_count(word, section, sort = TRUE)
+
+word_cors <- john_section_words %>%
+ group_by(word) %>%
+ filter(n() >= 20) %>%
+ pairwise_cor(word, section, sort = TRUE)
+word_cors %>%
+ filter(item1 %in% c("capital", "demand", "cost","economics")) %>%
+ group_by(item1) %>%
+ top_n(6) %>%
+ ungroup() %>%
+ mutate(item2 = reorder(item2, correlation)) %>%
+ ggplot(aes(item2, correlation)) +
+ geom_bar(stat = "identity") +
+ facet_wrap(~ item1, scales = "free") +
+ coord_flip()
+```
+Below are pairs of words in *The Wealth of Nations* that show at least a 0.40 correlation of appearing within the same 10-line section. As expected, we find a correlation between words like “clergy” and “church”, “bushel” and “wheat”, and “paper” and “circulation”.
+
+```{r fig.align='center', message=FALSE, warning=FALSE, out.width='80%', paged.print=FALSE}
+
+adam_smith4 <- gutenberg_download(c(3300))
+tidy_adam_smith4<- adam_smith4 
+  
+
+
+
+adam_section_words <- tidy_adam_smith4 %>%
+ mutate(section = row_number() %/% 10) %>%
+ filter(section > 0) %>%
+ unnest_tokens(word, text) %>%
+ filter(!word %in% stop_words$word)
+
+
+word_cors4 <- adam_section_words %>%
+ group_by(word) %>%
+ filter(n() >= 20) %>%
+ pairwise_cor(word, section, sort = TRUE)
+
+word_cors4_modified <- word_cors4 %>%  mutate(
+    item1 = gsub("[0-9]", "", item1),
+    item2 = gsub("[0-9]", "", item2)  )
+
+
+set.seed(2016)
+word_cors4_modified %>%
+ filter(correlation > .40) %>%
+ graph_from_data_frame() %>%
+ ggraph(layout = "fr") +
+ geom_edge_link(aes(edge_alpha = correlation), show.legend = FALSE) +
+ geom_node_point(color = "lightblue", size = 5) +
+ geom_node_text(aes(label = name), repel = TRUE) 
+```
+
+
+# Topic Modeling 
+
+Using the LDA() function from the topicmodels package, we can create a two-topic LDA model for both books mixed together. In combination with the ggplot2 package, I visualized the most common 10 words within topic 1 and topic 2. We can see that the probabilities of each term belonging to a certain topic is fairly accurate. If we compare both topics with what we did earlier in the frequency analysis section, we can quickly tell that topic 1 corresponds with *The General Theory of Employment, Interest, and Money* while topic 2 corresponds with *The Wealth of Nations*. This method works better with a much larger number of books, nonetheless, it is still provided us with some insights. 
+
+```{r fig.align='center', message=FALSE, warning=FALSE, out.width='80%', paged.print=FALSE}
+Tidy_John_Keyenes_topic<- Tidy_John_Keyenes%>% mutate(book="Theory of Employment")
+tidy_adam_smith_topic<- tidy_adam_smith %>% mutate(book="Wealth of Nations")
+both_books_topic<-bind_rows(Tidy_John_Keyenes_topic,tidy_adam_smith_topic) 
+both_books_topic<-both_books_topic%>%count(book, word, sort = TRUE) %>%
+ ungroup()
+
+both_books_topic_modified <- both_books_topic %>%
+  filter(!grepl("\\d", word))
+
+
+both_books_topic_modified<- both_books_topic_modified %>%
+ cast_dtm(book, word, n)
+
+
+
+lda <- LDA(both_books_topic_modified, k = 2, control = list(seed = 1234))
+
+topics <- tidy(lda, matrix = "beta")
+
+top_terms <- topics %>%
+ group_by(topic) %>%
+ top_n(10, beta) %>%
+ ungroup() %>%
+ arrange(topic, -beta)
+top_terms %>%
+ mutate(term = reorder(term, beta)) %>%
+ ggplot(aes(term, beta, fill = factor(topic))) +
+ geom_col(show.legend = FALSE) +
+ facet_wrap(~ topic, scales = "free") +
+ coord_flip()
+
+```
+Based on a log ratio of the two topics, below are the words with the greatest differences in beta between topic 2 and topic 1.
+
+```{r fig.align='center', message=FALSE, warning=FALSE, out.width='80%', paged.print=FALSE}
+beta_spread <- topics %>%
+ mutate(topic = paste0("topic", topic)) %>%
+ spread(topic, beta) %>%
+ filter(topic1 > .001 | topic2 > .001) %>%
+ mutate(log_ratio = log2(topic2 / topic1))
+
+beta_spread %>%
+ group_by(log_ratio < 0) %>%
+ top_n(15, abs(log_ratio)) %>%
+ ungroup() %>%
+ mutate(word = reorder(term, log_ratio)) %>%
+ ggplot(aes(word, log_ratio, fill = log_ratio < 0)) +
+ geom_col(show.legend = FALSE) +
+ coord_flip() 
+
+```
+
+# Conclusion
+
+Smith’s work is a mixture of economics, history, and international issues. On the other hand, Keynes’s work is mainly macro-economic theory. Smith advocated for free markets and minimal government intervention which formed the basis of classical economics. Keynes advocated for government intervention when needed. Though not mutually exclusive to each, Smith’s work was more on long-term economic growth, while Keynes focused more on short-term economic fluctuations.
+
+```{r, include=FALSE}
+knitr::write_bib(c('knitr','rmarkdown','posterdown','pagedown'), 'packages.bib')
+```
+
+# References
+https://shorturl.at/CHV49
